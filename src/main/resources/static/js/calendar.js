@@ -1,0 +1,21 @@
+(() => {
+ const people=[...document.querySelectorAll('#peopleData > div')].map(el=>({name:el.dataset.name,department:el.dataset.department, birthDate:el.dataset.birthDate,nationalId:el.dataset.nationalId}));
+ const today=new Date();let month=today.getMonth(),year=today.getFullYear();
+ const calendar=document.querySelector('#calendar'),title=document.querySelector('#monthTitle'),modal=document.querySelector('#birthdayModal');
+ const currentLanguage=()=>window.cumpleRhLanguage?.() ?? 'en';
+ const locale=()=>currentLanguage()==='es'?'es-EC':'en-US';
+ const months=(language)=>Array.from({length:12},(_,index)=>new Intl.DateTimeFormat(language==='es'?'es-EC':'en-US',{month:'long'}).format(new Date(2026,index,1)));
+ const isBirthday=(p,m,d)=>{const [y,mm,dd]=p.birthDate.split('-').map(Number);return mm===m+1&&dd===d;};
+ function openBirthday(p){const birthDate=Number(p.birthDate.substring(0,4));document.querySelector('#modalTitle').textContent=p.name;document.querySelector('#modalAge').textContent=(currentLanguage()==='es'?`Cumple ${year-birthDate} años en ${year}`:`Turns ${year-birthDate} in ${year}`);document.querySelector('#modalDepartment').textContent=currentLanguage()==='en'?({'Administración':'Administration','Recursos Humanos':'Human Resources','Contabilidad':'Accounting','Ventas':'Sales','Tecnología':'Technology','Logística':'Logistics'}[p.department]||p.department):p.department;document.querySelector('#modalLink').href='/employees/'+encodeURIComponent(p.nationalId);modal.hidden=false;}
+ function render(){title.textContent=months(currentLanguage())[month].replace(/^./,c=>c.toUpperCase())+' '+year;calendar.querySelectorAll('.day').forEach(el=>el.remove());let firstDay=(new Date(year,month,1).getDay()+6)%7;let daysInMonth=new Date(year,month+1,0).getDate();let cellCount=Math.ceil((firstDay+daysInMonth)/7)*7;let birthdayCount=0;
+  for(let position=0;position<cellCount;position++){let d=position-firstDay+1;let cell=document.createElement('div');cell.className='day';if(d<1||d>daysInMonth){cell.classList.add('outside');calendar.append(cell);continue;}
+   const currentDate=new Date();if(d===currentDate.getDate()&&month===currentDate.getMonth()&&year===currentDate.getFullYear())cell.classList.add('today');let number=document.createElement('span');number.className='day-number';number.textContent=d;cell.append(number);
+   people.filter(p=>isBirthday(p,month,d)).forEach(p=>{birthdayCount++;let btn=document.createElement('button');btn.type='button';btn.className='birthday-chip';btn.textContent='🎂 '+p.name;btn.title=p.name+' · '+p.department;btn.addEventListener('click',()=>openBirthday(p));cell.append(btn)});calendar.append(cell);
+  }
+  document.querySelector('#monthCount').textContent=birthdayCount;document.querySelector('#monthCountLabel').textContent=(currentLanguage()==='es'?'En '+months('es')[month]+' de '+year:'In '+months('en')[month]+' '+year);
+  const upcoming=people.map(p=>{let [y,m,d]=p.birthDate.split('-').map(Number);let f=new Date(today.getFullYear(),m-1,d);if(f<new Date(today.getFullYear(),today.getMonth(),today.getDate()))f=new Date(today.getFullYear()+1,m-1,d);if(m===2&&d===29&&f.getMonth()!==1){let z=f.getFullYear();while(new Date(z,1,29).getMonth()!==1)z++;f=new Date(z,1,29);}return {p,f};}).sort((a,b)=>a.f-b.f)[0];
+  document.querySelector('#nextBirthday').textContent=upcoming?upcoming.p.name:'—';document.querySelector('#nextBirthdayDate').textContent=upcoming?upcoming.f.toLocaleDateString(locale(),{day:'numeric',month:'long'}):(currentLanguage()==='es'?'Sin empleados':'No employees');
+ }
+ document.querySelector('#previousButton').addEventListener('click',()=>{month--;if(month<0){month=11;year--;}render()});document.querySelector('#nextButton').addEventListener('click',()=>{month++;if(month>11){month=0;year++;}render()});document.querySelector('#todayButton').addEventListener('click',()=>{month=today.getMonth();year=today.getFullYear();render()});
+ document.querySelector('#closeModal').addEventListener('click',()=>modal.hidden=true);modal.addEventListener('click',e=>{if(e.target===modal)modal.hidden=true});document.addEventListener('keydown',e=>{if(e.key==='Escape')modal.hidden=true});window.renderBirthdayCalendar=render;render();
+})();
